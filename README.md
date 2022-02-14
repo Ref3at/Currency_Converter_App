@@ -26,16 +26,16 @@ Converter API</a>
 
 # How to run the app
 
-1 - Clone the repository to Android Studio.
-2 - Register at <a href='https://free.currencyconverterapi.com'>Currency Converter API</a> to get your
+- Clone the repository to Android Studio.
+- Register at <a href='https://free.currencyconverterapi.com'>Currency Converter API</a> to get your
   API_KEY.
-3 - Put the following line to your gradle.properties file".
+- Put the following line to your gradle.properties file".
 
 ```bash
 API_KEY="<YOUR_API_KEY>"
 ```
 
-4 - Sync the run :)
+- Sync the run :)
 
 ## App Screenshots
 
