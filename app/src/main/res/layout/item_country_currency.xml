@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:padding="@dimen/_8sdp">
+
+
+        <ImageView
+            android:scaleType="fitXY"
+            android:id="@+id/img_flag"
+            android:layout_width="@dimen/_42sdp"
+            android:layout_height="@dimen/_30sdp"
+            android:src="@drawable/img_flag_placeholder" />
+
+        <View
+            android:layout_width="@dimen/_10sdp"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+
+            <TextView
+                android:id="@+id/txt_country_name"
+                style="@style/TextAppearance.Material3.BodyLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Egypt" />
+
+
+            <TextView
+                android:id="@+id/txt_currency_name_symbol"
+                style="@style/TextAppearance.Material3.BodyMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Egyptian pound (£)" />
+
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="@dimen/_5sdp"
+            android:layout_height="match_parent" />
+
+        <TextView
+            android:id="@+id/txt_currencyId"
+            style="@style/TextAppearance.Material3.TitleLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="EGP"
+            android:textColor="#3C3C3C"
+            />
+
+
+    </LinearLayout>
+
+
+</com.google.android.material.card.MaterialCardView>
