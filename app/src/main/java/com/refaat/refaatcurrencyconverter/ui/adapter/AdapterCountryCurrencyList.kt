@@ -16,7 +16,7 @@ import com.refaat.refaatcurrencyconverter.databinding.ItemCountryCurrencyBinding
 import com.refaat.refaatcurrencyconverter.domain.model.CurrencyItem
 
 
-class AdapterCountryCurrencyList :
+class AdapterCountryCurrencyList(private val selectedCurrency : (CurrencyItem) -> Unit ) :
     RecyclerView.Adapter<AdapterCountryCurrencyList.CountryCurrencyViewHolder>(), Filterable {
 
     private val allCurrencyItemList: MutableList<CurrencyItem> = ArrayList()
@@ -49,7 +49,8 @@ class AdapterCountryCurrencyList :
         }
 
         holder.itemView.setOnClickListener {
-            (holder.itemView.context as ICurrencySelection).selectedItem(filteredCurrencyItemList[position])
+            selectedCurrency.invoke(filteredCurrencyItemList[position])
+//            (holder.itemView.context as ICurrencySelection).selectedItem(filteredCurrencyItemList[position])
         }
     }
 
@@ -114,6 +115,6 @@ class AdapterCountryCurrencyList :
 
 }
 
-interface ICurrencySelection {
-    fun selectedItem(selectedCurrencyItem: CurrencyItem)
-}
+//interface ICurrencySelection {
+//    fun selectedItem(selectedCurrencyItem: CurrencyItem)
+//}

@@ -17,15 +17,15 @@ import com.refaat.refaatcurrencyconverter.common.SELECTION_KEY
 import com.refaat.refaatcurrencyconverter.databinding.ActivityCurrencySelectionBinding
 import com.refaat.refaatcurrencyconverter.domain.model.CurrencyItem
 import com.refaat.refaatcurrencyconverter.ui.adapter.AdapterCountryCurrencyList
-import com.refaat.refaatcurrencyconverter.ui.adapter.ICurrencySelection
 import dagger.hilt.android.AndroidEntryPoint
 
 
 @AndroidEntryPoint
-class ActivityCurrencySelection : AppCompatActivity(), ICurrencySelection {
+class ActivityCurrencySelection : AppCompatActivity() {
 
     private lateinit var binding: ActivityCurrencySelectionBinding
-    private val adapter = AdapterCountryCurrencyList()
+    private val adapter =
+        AdapterCountryCurrencyList { selectedItem: CurrencyItem -> handleSelectedItem(selectedItem) }
     private val viewModel: CurrencySelectionViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -100,7 +100,7 @@ class ActivityCurrencySelection : AppCompatActivity(), ICurrencySelection {
         })
     }
 
-    override fun selectedItem(selectedCurrencyItem: CurrencyItem) {
+    private fun handleSelectedItem(selectedCurrencyItem: CurrencyItem) {
 
         val returnIntent = Intent()
         returnIntent.putExtra(SELECTION_KEY, intent.getStringExtra(SELECTION_KEY))
