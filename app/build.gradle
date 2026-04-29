@@ -7,6 +7,7 @@ plugins {
 }
 
 android {
+    namespace "com.refaat.refaatcurrencyconverter"
     compileSdk 34
     defaultConfig {
         applicationId "com.refaat.refaatcurrencyconverter"
