@@ -1,20 +1,22 @@
 package com.refaat.refaatcurrencyconverter.ui.splash
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import androidx.lifecycle.lifecycleScope
 import com.refaat.refaatcurrencyconverter.ui.currencyConversion.ActivityConversion
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
+@SuppressLint("CustomSplashScreen")
 class SplashActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Handler(Looper.getMainLooper()).postDelayed({
-            // Your Code
-            val intent = Intent(this, ActivityConversion::class.java)
-            startActivity(intent)
+        lifecycleScope.launch {
+            delay(1500)
+            startActivity(Intent(this@SplashActivity, ActivityConversion::class.java))
             finish()
-        }, 2000)
+        }
     }
 }

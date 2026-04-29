@@ -2,6 +2,7 @@ package com.refaat.refaatcurrencyconverter.domain.repository
 
 import com.refaat.refaatcurrencyconverter.common.Resource
 import com.refaat.refaatcurrencyconverter.domain.model.CurrencyItem
+import com.refaat.refaatcurrencyconverter.domain.model.FrankfurterHistoryResponse
 import kotlinx.coroutines.flow.Flow
 
 interface CurrencyConverterRepository {
@@ -13,8 +14,7 @@ interface CurrencyConverterRepository {
         to: String,
         startDate: String,
         endDate: String
-    ): Flow<Resource<HashMap<String, HashMap<String, Double>>>>
+    ): Flow<Resource<FrankfurterHistoryResponse>>
 
-    suspend fun getDefaultCurrencies(code: String): Pair<CurrencyItem, CurrencyItem>
-
+    suspend fun getDefaultCurrencies(countryCode: String): Pair<CurrencyItem, CurrencyItem>
 }

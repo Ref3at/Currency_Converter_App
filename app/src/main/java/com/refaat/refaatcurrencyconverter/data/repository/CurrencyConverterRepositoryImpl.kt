@@ -1,62 +1,41 @@
 package com.refaat.refaatcurrencyconverter.data.repository
 
-import com.refaat.refaatcurrencyconverter.*
-import com.refaat.refaatcurrencyconverter.common.COMPACT_TYPE
-import com.refaat.refaatcurrencyconverter.common.GBR_CODE
 import com.refaat.refaatcurrencyconverter.common.Resource
-import com.refaat.refaatcurrencyconverter.common.USD_CODE
+import com.refaat.refaatcurrencyconverter.common.FALLBACK_FROM_CODE
+import com.refaat.refaatcurrencyconverter.common.FALLBACK_TO_CODE
 import com.refaat.refaatcurrencyconverter.data.CurrenciesDao
 import com.refaat.refaatcurrencyconverter.data.remoteDataSource.CurrencyConverterAPI
-import com.refaat.refaatcurrencyconverter.domain.repository.CurrencyConverterRepository
 import com.refaat.refaatcurrencyconverter.domain.model.CurrencyItem
+import com.refaat.refaatcurrencyconverter.domain.model.FrankfurterHistoryResponse
+import com.refaat.refaatcurrencyconverter.domain.repository.CurrencyConverterRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import retrofit2.HttpException
 import java.io.IOException
 
-
 class CurrencyConverterRepositoryImpl(
     private val dao: CurrenciesDao,
-    private val currencyConverterAPI: CurrencyConverterAPI
+    private val api: CurrencyConverterAPI
 ) : CurrencyConverterRepository {
+
     override fun getCurrencies(): Flow<Resource<List<CurrencyItem>>> = flow {
+        emit(Resource.Loading())
 
-        emit(Resource.Loading()) // to start show the progress bar
+        val cached = dao.getCurrenciesList()
+        if (cached.isNotEmpty()) {
+            emit(Resource.Success(cached))
+            return@flow
+        }
 
-        val currenciesList = dao.getCurrenciesList()
-
-        if (currenciesList.isNotEmpty()) {
-            emit(Resource.Success(currenciesList))
-        } else {
-            try {
-
-                val remoteCurrenciesList = currencyConverterAPI.getCurrenciesList()
-                val remoteCurrenciesList1 = remoteCurrenciesList.values
-                val remoteCurrenciesList2 = remoteCurrenciesList1.map {
-                    it.values
-                }
-                val listOfCurrencies = remoteCurrenciesList2.get(0).toList()
-                dao.insertCurrenciesList(listOfCurrencies)
-
-                val newCurrenciesList = dao.getCurrenciesList()
-                emit(Resource.Success(newCurrenciesList))
-
-            } catch (e: HttpException) {
-                emit(
-                    Resource.Error(
-                        message = "Oops, something went wrong!",
-                        data = currenciesList
-                    )
-                )
-
-            } catch (e: IOException) {
-                emit(
-                    Resource.Error(
-                        message = "Couldn't reach server, check your internet connection.",
-                        data = currenciesList
-                    )
-                )
-            }
+        try {
+            val remote = api.getCurrenciesList()
+            val items = remote.map { (code, name) -> CurrencyItem(code, name) }
+            dao.insertCurrenciesList(items)
+            emit(Resource.Success(dao.getCurrenciesList()))
+        } catch (e: HttpException) {
+            emit(Resource.Error("Oops, something went wrong!", cached))
+        } catch (e: IOException) {
+            emit(Resource.Error("Couldn't reach server, check your internet connection.", cached))
         }
     }
 
@@ -65,41 +44,43 @@ class CurrencyConverterRepositoryImpl(
         to: String,
         startDate: String,
         endDate: String
-    ): Flow<Resource<HashMap<String, HashMap<String, Double>>>> = flow {
-        emit(Resource.Loading()) // to start show the progress bar
+    ): Flow<Resource<FrankfurterHistoryResponse>> = flow {
+        emit(Resource.Loading())
         try {
-            val exchangeRate = currencyConverterAPI.getExchangeRate(
-                from.plus('_').plus(to),
-                startDate,
-                endDate,
-                COMPACT_TYPE
-            )
-            emit(Resource.Success(exchangeRate))
+            val response = api.getExchangeRate(startDate, endDate, from, to)
+            emit(Resource.Success(response))
         } catch (e: HttpException) {
-            emit(
-                Resource.Error(
-                    message = "Oops, something went wrong!",
-                )
-            )
+            emit(Resource.Error("Oops, something went wrong!"))
         } catch (e: IOException) {
-            emit(
-                Resource.Error(
-                    message = "Couldn't reach server, check your internet connection.",
-                )
-            )
-        }
-
-    }
-
-    override suspend fun getDefaultCurrencies(code: String): Pair<CurrencyItem, CurrencyItem> {
-        //The default two currencies are as follow
-        // - Device currency
-        // - USD or GBR if the Device currency is USD
-        return if (code == USD_CODE) {
-            Pair(dao.getCountry(USD_CODE), dao.getCountry(GBR_CODE))
-        } else {
-            Pair(dao.getCountry(code),dao.getCountry(USD_CODE))
+            emit(Resource.Error("Couldn't reach server, check your internet connection."))
         }
     }
 
+    override suspend fun getDefaultCurrencies(countryCode: String): Pair<CurrencyItem, CurrencyItem> {
+        val fromCode = countryToCurrencyCode[countryCode.uppercase()] ?: FALLBACK_FROM_CODE
+        val toCode = if (fromCode == FALLBACK_FROM_CODE) FALLBACK_TO_CODE else FALLBACK_FROM_CODE
+
+        val from = dao.getCurrency(fromCode) ?: CurrencyItem(fromCode, fromCode)
+        val to = dao.getCurrency(toCode) ?: CurrencyItem(toCode, toCode)
+        return Pair(from, to)
+    }
+
+    companion object {
+        val countryToCurrencyCode = mapOf(
+            "AU" to "AUD", "BG" to "BGN", "BR" to "BRL", "CA" to "CAD",
+            "CH" to "CHF", "CN" to "CNY", "CZ" to "CZK", "DK" to "DKK",
+            "GB" to "GBP", "HK" to "HKD", "HU" to "HUF", "ID" to "IDR",
+            "IL" to "ILS", "IN" to "INR", "IS" to "ISK", "JP" to "JPY",
+            "KR" to "KRW", "MX" to "MXN", "MY" to "MYR", "NO" to "NOK",
+            "NZ" to "NZD", "PH" to "PHP", "PL" to "PLN", "RO" to "RON",
+            "SE" to "SEK", "SG" to "SGD", "TH" to "THB", "TR" to "TRY",
+            "US" to "USD", "ZA" to "ZAR",
+            // Euro-zone countries
+            "AT" to "EUR", "BE" to "EUR", "CY" to "EUR", "DE" to "EUR",
+            "EE" to "EUR", "ES" to "EUR", "FI" to "EUR", "FR" to "EUR",
+            "GR" to "EUR", "HR" to "EUR", "IE" to "EUR", "IT" to "EUR",
+            "LT" to "EUR", "LU" to "EUR", "LV" to "EUR", "MT" to "EUR",
+            "NL" to "EUR", "PT" to "EUR", "SI" to "EUR", "SK" to "EUR"
+        )
+    }
 }

@@ -7,108 +7,97 @@ import com.refaat.refaatcurrencyconverter.common.Resource
 import com.refaat.refaatcurrencyconverter.common.sdf
 import com.refaat.refaatcurrencyconverter.domain.model.CurrencyItem
 import com.refaat.refaatcurrencyconverter.domain.model.ExchangeRate
+import com.refaat.refaatcurrencyconverter.domain.model.FrankfurterHistoryResponse
 import com.refaat.refaatcurrencyconverter.domain.useCases.UseCases
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
-import kotlin.collections.HashMap
 
 @HiltViewModel
 class CurrencyConversionViewModel @Inject constructor(
     private val useCases: UseCases
-) :
-    ViewModel() {
+) : ViewModel() {
+
     var currentRate = MutableLiveData(1.0)
     val currenciesLiveData: MutableLiveData<Resource<List<CurrencyItem>>> = MutableLiveData()
     val fromCurrency: MutableLiveData<CurrencyItem> = MutableLiveData()
     val toCurrency: MutableLiveData<CurrencyItem> = MutableLiveData()
     val exchangeRate: MutableLiveData<Resource<ExchangeRate>> = MutableLiveData()
+    val lastUpdated: MutableLiveData<String> = MutableLiveData()
 
     init {
         viewModelScope.launch {
             useCases.getCurrenciesUseCase().collect {
                 currenciesLiveData.value = it
                 if (it is Resource.Success) {
-                    val defaultCurrencies = useCases.getDefaultCurrenciesUseCase()
-                    fromCurrency.value = defaultCurrencies.first
-                    toCurrency.value = defaultCurrencies.second
+                    val defaults = useCases.getDefaultCurrenciesUseCase()
+                    fromCurrency.value = defaults.first
+                    toCurrency.value = defaults.second
                 }
             }
         }
     }
 
-    fun getTodayDate(): String {
-        val cal: Calendar = GregorianCalendar.getInstance()
-        cal.time = Date()
-        return sdf.format(Date().time)
-    }
+    fun getTodayDate(): String = sdf.format(Date())
 
     private fun getFrom8DaysDate(): String {
-        val cal: Calendar = GregorianCalendar.getInstance()
-        cal.time = Date()
-        cal.add(Calendar.DAY_OF_YEAR, -7);
+        val cal = GregorianCalendar.getInstance()
+        cal.add(Calendar.DAY_OF_YEAR, -7)
         return sdf.format(cal.time)
     }
 
     fun getExchangeDate() {
-
-        if (fromCurrency.value == null)
-            return
-        if (toCurrency.value == null)
-            return
+        val from = fromCurrency.value ?: return
+        val to = toCurrency.value ?: return
 
         viewModelScope.launch {
             useCases.getExchangeRateUseCase(
-                fromCurrency.value!!.currencyId!!,
-                toCurrency.value!!.currencyId!!, getFrom8DaysDate(), getTodayDate()
+                from.currencyCode,
+                to.currencyCode,
+                getFrom8DaysDate(),
+                getTodayDate()
             ).collect {
-
                 when (it) {
-                    is Resource.Loading -> {
-                        exchangeRate.value = Resource.Loading()
-                    }
-                    is Resource.Error -> {
-                        exchangeRate.value = Resource.Error(message = it.message)
-                    }
+                    is Resource.Loading -> exchangeRate.value = Resource.Loading()
+                    is Resource.Error -> exchangeRate.value = Resource.Error(it.message)
                     is Resource.Success -> {
-                        exchangeRate.value = Resource.Success(getExchangeRate(it.data))
+                        exchangeRate.value = Resource.Success(parseExchangeRate(it.data))
+                        lastUpdated.value = sdf.format(Date())
                     }
                 }
             }
         }
     }
 
-    private fun getExchangeRate(data: HashMap<String, HashMap<String, Double>>?): ExchangeRate? {
+    fun swapCurrencies() {
+        val temp = fromCurrency.value
+        fromCurrency.value = toCurrency.value
+        toCurrency.value = temp
+    }
 
-        if (data == null)
-            return null
+    private fun parseExchangeRate(response: FrankfurterHistoryResponse?): ExchangeRate? {
+        if (response == null) return null
 
-        val fromCurrency = data.keys.toList()[0].substringBefore('_')
-        val toCurrency = data.keys.toList()[0].substringAfter('_')
-        val theSortedMap =
-            data[fromCurrency.plus('_').plus(toCurrency)]?.toSortedMap(reverseOrder())
+        // rates map: "2024-01-08" -> {"EUR": 0.91}
+        val sortedDates = response.rates.keys.sortedDescending()
+        if (sortedDates.isEmpty()) return null
 
-        // update today rate value
-        val todayValue = theSortedMap?.values!!.toList()[0]
+        val todayValue = response.rates[sortedDates[0]]?.values?.firstOrNull() ?: return null
         currentRate.value = todayValue
 
-        val list7DaysKeys = theSortedMap.keys.toList()
-            .subList(1, theSortedMap.keys.toList().size)
-
-        val pairs = mutableListOf<Pair<String, Double>>()
-
-        for (day in list7DaysKeys) {
-            pairs.add(Pair(day, theSortedMap[day]!!))
+        val historyDates = if (sortedDates.size > 1) sortedDates.subList(1, sortedDates.size) else emptyList()
+        val pairs = historyDates.mapNotNull { date ->
+            val rate = response.rates[date]?.values?.firstOrNull() ?: return@mapNotNull null
+            Pair(date, rate)
         }
 
         return ExchangeRate(
-            currencyFrom = fromCurrency,
-            currencyTo = toCurrency,
+            currencyFrom = response.base,
+            currencyTo = response.rates.values.firstOrNull()?.keys?.firstOrNull() ?: "",
             todayRate = todayValue,
             last7DaysRates = pairs
         )
     }
-
 }

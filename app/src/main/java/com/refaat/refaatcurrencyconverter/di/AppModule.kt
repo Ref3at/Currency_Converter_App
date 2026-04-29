@@ -47,6 +47,7 @@ object AppModule {
         return CustomOkHttpClient
     }
 
+
     @Provides
     @Singleton
     fun providesCurrencyConverterAPI(customOkHttpClient: CustomOkHttpClient): CurrencyConverterAPI {

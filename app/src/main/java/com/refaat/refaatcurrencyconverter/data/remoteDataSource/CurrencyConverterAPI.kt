@@ -1,6 +1,6 @@
 package com.refaat.refaatcurrencyconverter.data.remoteDataSource
 
-import com.refaat.refaatcurrencyconverter.domain.model.CurrencyItem
+import com.refaat.refaatcurrencyconverter.domain.model.FrankfurterHistoryResponse
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -8,18 +8,17 @@ import retrofit2.http.Query
 interface CurrencyConverterAPI {
 
     companion object {
-        const val BASE_URL = "https://free.currconv.com"
+        const val BASE_URL = "https://api.frankfurter.app"
     }
 
-    @GET("api/v7/countries")
-    suspend fun getCurrenciesList(): HashMap<String, HashMap<String, CurrencyItem>>
+    @GET("currencies")
+    suspend fun getCurrenciesList(): HashMap<String, String>
 
-    @GET("api/v7/convert")
+    @GET("{startDate}..{endDate}")
     suspend fun getExchangeRate(
-        @Query("q") from_to: String,
-        @Query("date") startDate: String,
-        @Query("endDate") endDate: String,
-        @Query("compact") compact: String
-    ): HashMap<String, HashMap<String, Double>>
-
+        @Path("startDate") startDate: String,
+        @Path("endDate") endDate: String,
+        @Query("from") from: String,
+        @Query("to") to: String
+    ): FrankfurterHistoryResponse
 }

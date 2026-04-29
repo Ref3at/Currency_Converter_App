@@ -7,7 +7,7 @@ import com.refaat.refaatcurrencyconverter.domain.model.CurrencyItem
 
 @Database(
     entities = [CurrencyItem::class],
-    version = 1
+    version = 2
 )
 abstract class AppDataBase : RoomDatabase() {
     abstract val dao: CurrenciesDao

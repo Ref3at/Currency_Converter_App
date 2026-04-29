@@ -4,8 +4,6 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.Filter
 import android.widget.Filterable
-import android.widget.Toast
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -15,106 +13,70 @@ import com.refaat.refaatcurrencyconverter.common.getTheFlagURL
 import com.refaat.refaatcurrencyconverter.databinding.ItemCountryCurrencyBinding
 import com.refaat.refaatcurrencyconverter.domain.model.CurrencyItem
 
+class AdapterCountryCurrencyList(private val onSelected: (CurrencyItem) -> Unit) :
+    RecyclerView.Adapter<AdapterCountryCurrencyList.CurrencyViewHolder>(), Filterable {
 
-class AdapterCountryCurrencyList(private val selectedCurrency : (CurrencyItem) -> Unit ) :
-    RecyclerView.Adapter<AdapterCountryCurrencyList.CountryCurrencyViewHolder>(), Filterable {
-
-    private val allCurrencyItemList: MutableList<CurrencyItem> = ArrayList()
-    private var filteredCurrencyItemList: MutableList<CurrencyItem> = ArrayList()
+    private val allItems: MutableList<CurrencyItem> = mutableListOf()
+    private var filteredItems: MutableList<CurrencyItem> = mutableListOf()
     val noResultQuery: MutableLiveData<String?> = MutableLiveData()
 
-    class CountryCurrencyViewHolder(val binding: ItemCountryCurrencyBinding) :
+    class CurrencyViewHolder(val binding: ItemCountryCurrencyBinding) :
         RecyclerView.ViewHolder(binding.root)
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CountryCurrencyViewHolder {
-        val binding =
-            ItemCountryCurrencyBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return CountryCurrencyViewHolder(binding)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CurrencyViewHolder {
+        val binding = ItemCountryCurrencyBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return CurrencyViewHolder(binding)
     }
 
-    override fun onBindViewHolder(holder: CountryCurrencyViewHolder, position: Int) {
-        with(holder) {
-            with(filteredCurrencyItemList[position]) {
-                binding.txtCountryName.text = this.name
-                binding.txtCurrencyNameSymbol.text = this.currencyName + " (${this.currencySymbol})"
-                binding.txtCurrencyId.text = this.currencyId
+    override fun onBindViewHolder(holder: CurrencyViewHolder, position: Int) {
+        val item = filteredItems[position]
+        with(holder.binding) {
+            txtCountryName.text = item.currencyName
+            txtCurrencyNameSymbol.text = item.currencyCode
+            txtCurrencyId.text = item.currencyCode
 
-                Glide.with(holder.itemView.context)
-                    .load(getTheFlagURL(this.id))
-                    .placeholder(R.drawable.img_flag_placeholder)
-                    .error(R.drawable.img_flag_placeholder)
-                    .diskCacheStrategy(DiskCacheStrategy.DATA)
-                    .into(binding.imgFlag)
-            }
+            Glide.with(holder.itemView.context)
+                .load(getTheFlagURL(item.currencyCode))
+                .placeholder(R.drawable.img_flag_placeholder)
+                .error(R.drawable.img_flag_placeholder)
+                .diskCacheStrategy(DiskCacheStrategy.DATA)
+                .into(imgFlag)
         }
-
-        holder.itemView.setOnClickListener {
-            selectedCurrency.invoke(filteredCurrencyItemList[position])
-//            (holder.itemView.context as ICurrencySelection).selectedItem(filteredCurrencyItemList[position])
-        }
+        holder.itemView.setOnClickListener { onSelected(item) }
     }
 
-    override fun getItemCount(): Int {
-        return filteredCurrencyItemList.size
-    }
+    override fun getItemCount(): Int = filteredItems.size
 
-
-    fun updateTheList(currencyItemList: List<CurrencyItem>) {
-        this.allCurrencyItemList.clear()
-        this.allCurrencyItemList.addAll(currencyItemList)
-
-        this.filteredCurrencyItemList.clear()
-        this.filteredCurrencyItemList.addAll(currencyItemList)
+    fun updateTheList(list: List<CurrencyItem>) {
+        allItems.clear()
+        allItems.addAll(list)
+        filteredItems.clear()
+        filteredItems.addAll(list)
         notifyDataSetChanged()
     }
 
-    override fun getFilter(): Filter {
-        return currencyFilter
-    }
-
+    override fun getFilter(): Filter = currencyFilter
 
     private val currencyFilter = object : Filter() {
         override fun performFiltering(constraint: CharSequence?): FilterResults {
-            val filteredList = mutableListOf<CurrencyItem>()
-            if (constraint == null || constraint.isEmpty()) {
-                filteredList.addAll(allCurrencyItemList)
+            val query = constraint?.toString()?.lowercase().orEmpty()
+            val result = if (query.isEmpty()) {
+                allItems.toMutableList()
             } else {
-                for (currencyItem in allCurrencyItemList) {
-                    if (currencyItem.name?.lowercase()
-                            ?.contains(
-                                constraint.toString().lowercase()
-                            ) == true || currencyItem.currencyName?.lowercase()
-                            ?.contains(constraint.toString().lowercase()) == true
-
-                        || currencyItem.currencyId?.lowercase()
-                            ?.contains(constraint.toString().lowercase()) == true
-                    ) {
-                        filteredList.add(currencyItem)
-                    }
-                }
+                allItems.filter {
+                    it.currencyCode.lowercase().contains(query) ||
+                        it.currencyName.lowercase().contains(query)
+                }.toMutableList()
             }
-            val results = FilterResults()
-            results.values = filteredList
-            return results
+            return FilterResults().apply { values = result }
         }
 
-        override fun publishResults(constraint: CharSequence?, filterResults: FilterResults?) {
-
-            if (filterResults == null || (filterResults.values as ArrayList<CurrencyItem>).size == 0) {
-                noResultQuery.value = constraint.toString()
-            } else {
-                noResultQuery.value = null
-            }
-
-            filteredCurrencyItemList.clear()
-            filteredCurrencyItemList.addAll(filterResults?.values as ArrayList<CurrencyItem>)
+        @Suppress("UNCHECKED_CAST")
+        override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+            val list = results?.values as? MutableList<CurrencyItem> ?: mutableListOf()
+            noResultQuery.value = if (list.isEmpty()) constraint?.toString() else null
+            filteredItems = list
             notifyDataSetChanged()
         }
-
     }
-
 }
-
-//interface ICurrencySelection {
-//    fun selectedItem(selectedCurrencyItem: CurrencyItem)
-//}
